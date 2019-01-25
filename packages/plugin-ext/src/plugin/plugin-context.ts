@@ -354,7 +354,7 @@ export function createAPIFactory(
             },
             onWillSaveTextDocument(listener, thisArg?, disposables?) {
                 // TODO to implement
-                return { dispose: () => {}};
+                return { dispose: () => { } };
             },
             onDidSaveTextDocument(listener, thisArg?, disposables?) {
                 return documents.onDidSaveTextDocument(listener, thisArg, disposables);
@@ -410,6 +410,17 @@ export function createAPIFactory(
             asRelativePath(pathOrUri: theia.Uri | string, includeWorkspace?: boolean): string | undefined {
                 return workspaceExt.getRelativePath(pathOrUri, includeWorkspace);
             },
+            registerTaskProvider(type: string, provider: theia.TaskProvider): theia.Disposable {
+                return tasks.registerTaskProvider(type, provider);
+            },
+            onDidRenameFile(listener, thisArg?, disposables?): theia.Disposable {
+                // FIXME: to implement
+                return new Disposable(() => { });
+            },
+            onWillRenameFile(listener, thisArg?, disposables?): theia.Disposable {
+                // FIXME: to implement
+                return new Disposable(() => { });
+            }
         };
 
         const env: typeof theia.env = {
@@ -684,6 +695,7 @@ export function createAPIFactory(
 class Plugin<T> implements theia.Plugin<T> {
     id: string;
     pluginPath: string;
+    extensionPath: string;
     isActive: boolean;
     // tslint:disable-next-line:no-any
     packageJSON: any;
@@ -691,6 +703,7 @@ class Plugin<T> implements theia.Plugin<T> {
     constructor(private readonly pluginManager: PluginManager, plugin: InternalPlugin) {
         this.id = plugin.model.id;
         this.pluginPath = plugin.pluginFolder;
+        this.extensionPath = plugin.pluginFolder;
         this.packageJSON = plugin.rawModel;
         this.isActive = true;
         this.pluginType = plugin.model.entryPoint.frontend ? 'frontend' : 'backend';

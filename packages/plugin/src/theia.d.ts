@@ -1649,6 +1649,19 @@ declare module '@theia/plugin' {
         lineNumbers?: TextEditorLineNumbersStyle;
     }
 
+    // Proposed API
+    export interface FileRenameEvent {
+        readonly oldUri: Uri;
+        readonly newUri: Uri;
+    }
+
+    // Proposed API
+    export interface FileWillRenameEvent {
+        readonly oldUri: Uri;
+        readonly newUri: Uri;
+        waitUntil(thenable: Thenable<WorkspaceEdit>): void;
+    }
+
     /**
      * Denotes a location of an editor in the window. Editors can be arranged in a grid
      * and each column represents one editor location in that grid by counting the editors
@@ -3984,6 +3997,21 @@ declare module '@theia/plugin' {
          * @return A path relative to the root or the input.
          */
         export function asRelativePath(pathOrUri: string | Uri, includeWorkspaceFolder?: boolean): string | undefined;
+
+        /**
+        * ~~Register a task provider.~~
+        *
+        * @deprecated Use the corresponding function on the `tasks` namespace instead
+        *
+        * @param type The task kind type this provider is registered for.
+        * @param provider A task provider.
+        * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+        */
+        export function registerTaskProvider(type: string, provider: TaskProvider): Disposable;
+
+        // proposed API
+        export const onWillRenameFile: Event<FileWillRenameEvent>;
+        export const onDidRenameFile: Event<FileRenameEvent>;
     }
 
     export namespace env {
