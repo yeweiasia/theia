@@ -18,7 +18,7 @@ import * as electron from 'electron';
 import { inject, injectable } from 'inversify';
 import {
     CommandRegistry, isOSX, ActionMenuNode, CompositeMenuNode,
-    MAIN_MENU_BAR, MenuModelRegistry, MenuPath, SelectionService, UriSelection
+    MAIN_MENU_BAR, MenuModelRegistry, MenuPath, SelectionService, MenuSelection
 } from '../../common';
 import { PreferenceService, KeybindingRegistry, Keybinding, KeyCode, Key } from '../../browser';
 import { ContextKeyService } from '../../browser/context-key-service';
@@ -114,7 +114,7 @@ export class ElectronMainMenuFactory {
                 }
 
                 if (!this.commandRegistry.isVisible(commandId)
-                    || (!!menu.action.when && !this.contextKeyService.match(menu.action.when))) {
+                    || (!!menu.action.when && !this.contextKeyService.match(menu.action.when))) {
                     continue;
                 }
 
@@ -213,11 +213,11 @@ export class ElectronMainMenuFactory {
             // This is workaround for https://github.com/theia-ide/theia/issues/446.
             // Electron menus do not update based on the `isEnabled`, `isVisible` property of the command.
             // We need to check if we can execute it.
-            const uri = UriSelection.getUri(this.selectionService.selection);
-            if (this.commandRegistry.isEnabled(command, uri)) {
-                await this.commandRegistry.executeCommand(command, uri);
-                if (this.commandRegistry.isVisible(command, uri)) {
-                    this._menu.getMenuItemById(command).checked = this.commandRegistry.isToggled(command, uri);
+            const arg = MenuSelection.getArg(this.selectionService.selection);
+            if (this.commandRegistry.isEnabled(command, arg)) {
+                await this.commandRegistry.executeCommand(command, arg);
+                if (this.commandRegistry.isVisible(command, arg)) {
+                    this._menu.getMenuItemById(command).checked = this.commandRegistry.isToggled(command, arg);
                     electron.remote.getCurrentWindow().setMenu(this._menu);
                 }
             }

@@ -48,3 +48,13 @@ export namespace UriSelection {
     }
 
 }
+
+export namespace MenuSelection {
+    // tslint:disable-next-line:no-any
+    export function getArg(selection: any): any {
+        const uri = UriSelection.getUri(selection);
+        return uri ? uri :
+            (typeof selection !== 'object' && typeof selection !== 'function') ? selection :
+                undefined;
+    }
+}

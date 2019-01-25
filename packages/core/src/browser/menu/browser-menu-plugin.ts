@@ -19,7 +19,7 @@ import { MenuBar as MenuBarWidget, Menu as MenuWidget, Widget } from '@phosphor/
 import { CommandRegistry as PhosphorCommandRegistry } from '@phosphor/commands';
 import {
     CommandRegistry, ActionMenuNode, CompositeMenuNode,
-    MenuModelRegistry, MAIN_MENU_BAR, MenuPath, ILogger, SelectionService, UriSelection
+    MenuModelRegistry, MAIN_MENU_BAR, MenuPath, ILogger, SelectionService, MenuSelection
 } from '../../common';
 import { KeybindingRegistry, Keybinding } from '../keybinding';
 import { FrontendApplicationContribution, FrontendApplication } from '../frontend-application';
@@ -70,8 +70,8 @@ export class BrowserMainMenuFactory {
 
     protected createPhosphorCommands(menu: CompositeMenuNode): PhosphorCommandRegistry {
         const commands = new PhosphorCommandRegistry();
-        const uri = UriSelection.getUri(this.selectionService.selection);
-        const args = uri && [uri];
+        const arg = MenuSelection.getArg(this.selectionService.selection);
+        const args = arg && [arg];
         this.addPhosphorCommands(commands, menu, { args });
         return commands;
     }
