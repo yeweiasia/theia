@@ -77,6 +77,12 @@ declare module '@theia/plugin' {
          */
         readonly pluginPath: string;
 
+		/**
+		 * The absolute file path of the directory containing this extension.
+         * Duplicates #pluginPath
+		 */
+        readonly extensionPath: string;
+
         /**
          * `true` if the plug-in has been activated.
          */
@@ -1649,13 +1655,15 @@ declare module '@theia/plugin' {
         lineNumbers?: TextEditorLineNumbersStyle;
     }
 
-    // Proposed API
+    // Experimental API
+    // https://github.com/Microsoft/vscode/blob/1.30.2/src/vs/vscode.proposed.d.ts#L1015
     export interface FileRenameEvent {
         readonly oldUri: Uri;
         readonly newUri: Uri;
     }
 
-    // Proposed API
+    // Experimental API
+    // https://github.com/Microsoft/vscode/blob/1.30.2/src/vs/vscode.proposed.d.ts#L1020 
     export interface FileWillRenameEvent {
         readonly oldUri: Uri;
         readonly newUri: Uri;
@@ -4009,7 +4017,8 @@ declare module '@theia/plugin' {
         */
         export function registerTaskProvider(type: string, provider: TaskProvider): Disposable;
 
-        // proposed API
+        // Experimental API
+        // https://github.com/Microsoft/vscode/blob/1.30.2/src/vs/vscode.proposed.d.ts#L1026-L1028
         export const onWillRenameFile: Event<FileWillRenameEvent>;
         export const onDidRenameFile: Event<FileRenameEvent>;
     }

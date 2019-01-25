@@ -413,12 +413,11 @@ export function createAPIFactory(
             registerTaskProvider(type: string, provider: theia.TaskProvider): theia.Disposable {
                 return tasks.registerTaskProvider(type, provider);
             },
+            // Experimental API https://github.com/theia-ide/theia/issues/4167
             onDidRenameFile(listener, thisArg?, disposables?): theia.Disposable {
-                // FIXME: to implement
                 return new Disposable(() => { });
             },
             onWillRenameFile(listener, thisArg?, disposables?): theia.Disposable {
-                // FIXME: to implement
                 return new Disposable(() => { });
             }
         };
