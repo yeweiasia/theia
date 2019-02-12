@@ -23,7 +23,6 @@ import { QueryParameters } from '../common/env';
 import { TextEditorCursorStyle } from '../common/editor-options';
 import { TextEditorLineNumbersStyle, EndOfLine, OverviewRulerLane, IndentAction, FileOperationOptions } from '../plugin/types-impl';
 import { UriComponents } from '../common/uri-components';
-import { PreferenceChange } from '@theia/core/lib/browser';
 import { ConfigurationTarget } from '../plugin/types-impl';
 import {
     SerializedDocumentFilter,
@@ -65,11 +64,15 @@ import { SymbolInformation } from 'vscode-languageserver-types';
 
 export interface PluginInitData {
     plugins: PluginMetadata[];
-    preferences: { [key: string]: any };
+    preferences: PreferenceData;
     globalState: KeysToKeysToAnyValue;
     workspaceState: KeysToKeysToAnyValue;
     env: EnvInit;
     extApi?: ExtPluginApi[];
+}
+
+export interface PreferenceData {
+    [scope: number]: any;
 }
 
 export interface Plugin {
@@ -151,8 +154,11 @@ export interface PluginManagerExt {
 
 export interface CommandRegistryMain {
     $registerCommand(command: theia.Command): void;
-
     $unregisterCommand(id: string): void;
+
+    $registerHandler(id: string): void;
+    $unregisterHandler(id: string): void;
+
     $executeCommand<T>(id: string, ...args: any[]): PromiseLike<T | undefined>;
     $getCommands(): PromiseLike<string[]>;
     $getKeyBinding(commandId: string): PromiseLike<theia.CommandKeyBinding[] | undefined>;
@@ -257,12 +263,13 @@ export interface MessageRegistryMain {
 }
 
 export interface StatusBarMessageRegistryMain {
-    $setMessage(text: string | undefined,
+    $setMessage(id: string,
+        text: string | undefined,
         priority: number,
         alignment: theia.StatusBarAlignment,
         color: string | undefined,
         tooltip: string | undefined,
-        command: string | undefined): PromiseLike<string>;
+        command: string | undefined): PromiseLike<void>;
     $update(id: string, message: string): void;
     $dispose(id: string): void;
 }
@@ -719,8 +726,13 @@ export interface PreferenceRegistryMain {
         resource: any | undefined
     ): PromiseLike<void>;
 }
+
+export interface PreferenceChangeExt {
+    preferenceName: string,
+    newValue: any
+}
 export interface PreferenceRegistryExt {
-    $acceptConfigurationChanged(data: { [key: string]: any }, eventData: PreferenceChange): void;
+    $acceptConfigurationChanged(data: { [key: string]: any }, eventData: PreferenceChangeExt): void;
 }
 
 export interface OutputChannelRegistryMain {
@@ -976,7 +988,7 @@ export interface DebugMain {
     $addBreakpoints(breakpoints: Breakpoint[]): Promise<void>;
     $removeBreakpoints(breakpoints: Breakpoint[]): Promise<void>;
     $startDebugging(folder: theia.WorkspaceFolder | undefined, nameOrConfiguration: string | theia.DebugConfiguration): Promise<boolean>;
-    $customRequest(command: string, args?: any): Promise<DebugProtocol.Response>;
+    $customRequest(sessionId: string, command: string, args?: any): Promise<DebugProtocol.Response>;
 }
 
 export const PLUGIN_RPC_CONTEXT = {

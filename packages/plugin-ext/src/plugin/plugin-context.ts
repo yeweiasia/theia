@@ -13,6 +13,9 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
+
+// tslint:disable:no-any
+
 import * as theia from '@theia/plugin';
 import { CommandRegistryImpl } from './command-registry';
 import { Emitter } from '@theia/core/lib/common/event';
@@ -123,7 +126,10 @@ export function createAPIFactory(
     pluginManager: PluginManager,
     envExt: EnvExtImpl,
     debugExt: DebugExtImpl,
-    preferenceRegistryExt: PreferenceRegistryExtImpl): PluginAPIFactory {
+    preferenceRegistryExt: PreferenceRegistryExtImpl,
+    editorsAndDocumentsExt: EditorsAndDocumentsExtImpl,
+    workspaceExt: WorkspaceExtImpl
+): PluginAPIFactory {
 
     const commandRegistry = rpc.set(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT, new CommandRegistryImpl(rpc));
     const quickOpenExt = rpc.set(MAIN_RPC_CONTEXT.QUICK_OPEN_EXT, new QuickOpenExtImpl(rpc));
@@ -132,10 +138,8 @@ export function createAPIFactory(
     const windowStateExt = rpc.set(MAIN_RPC_CONTEXT.WINDOW_STATE_EXT, new WindowStateExtImpl());
     const notificationExt = rpc.set(MAIN_RPC_CONTEXT.NOTIFICATION_EXT, new NotificationExtImpl(rpc));
     const statusBarExt = new StatusBarExtImpl(rpc);
-    const editorsAndDocuments = rpc.set(MAIN_RPC_CONTEXT.EDITORS_AND_DOCUMENTS_EXT, new EditorsAndDocumentsExtImpl(rpc));
-    const editors = rpc.set(MAIN_RPC_CONTEXT.TEXT_EDITORS_EXT, new TextEditorsExtImpl(rpc, editorsAndDocuments));
-    const documents = rpc.set(MAIN_RPC_CONTEXT.DOCUMENTS_EXT, new DocumentsExtImpl(rpc, editorsAndDocuments));
-    const workspaceExt = rpc.set(MAIN_RPC_CONTEXT.WORKSPACE_EXT, new WorkspaceExtImpl(rpc, editorsAndDocuments));
+    const editors = rpc.set(MAIN_RPC_CONTEXT.TEXT_EDITORS_EXT, new TextEditorsExtImpl(rpc, editorsAndDocumentsExt));
+    const documents = rpc.set(MAIN_RPC_CONTEXT.DOCUMENTS_EXT, new DocumentsExtImpl(rpc, editorsAndDocumentsExt));
     const statusBarMessageRegistryExt = new StatusBarMessageRegistryExt(rpc);
     const terminalExt = rpc.set(MAIN_RPC_CONTEXT.TERMINAL_EXT, new TerminalServiceExtImpl(rpc));
     const outputChannelRegistryExt = new OutputChannelRegistryExt(rpc);
@@ -150,23 +154,42 @@ export function createAPIFactory(
     return function (plugin: InternalPlugin): typeof theia {
         const commands: typeof theia.commands = {
             // tslint:disable-next-line:no-any
-            registerCommand(command: theia.Command, handler?: <T>(...args: any[]) => T | Thenable<T>): Disposable {
-                return commandRegistry.registerCommand(command, handler);
+            registerCommand(command: theia.Command, handler?: <T>(...args: any[]) => T | Thenable<T>, thisArg?: any): Disposable {
+                return commandRegistry.registerCommand(command, handler, thisArg);
             },
             // tslint:disable-next-line:no-any
             executeCommand<T>(commandId: string, ...args: any[]): PromiseLike<T | undefined> {
                 return commandRegistry.executeCommand<T>(commandId, ...args);
             },
-            // tslint:disable-next-line:no-any
-            registerTextEditorCommand(command: theia.Command, callback: (textEditor: theia.TextEditor, edit: theia.TextEditorEdit, ...arg: any[]) => void): Disposable {
-                throw new Error('Function registerTextEditorCommand is not implemented');
+            registerTextEditorCommand(command: string, handler: (textEditor: theia.TextEditor, edit: theia.TextEditorEdit, ...arg: any[]) => void, thisArg?: any): Disposable {
+                return commandRegistry.registerCommand({ id: command }, (...args: any[]): any => {
+                    const activeTextEditor = editors.getActiveEditor();
+                    if (!activeTextEditor) {
+                        console.warn('Cannot execute ' + command + ' because there is no active text editor.');
+                        return undefined;
+                    }
+
+                    return activeTextEditor.edit((edit: theia.TextEditorEdit) => {
+                        args.unshift(activeTextEditor, edit);
+                        handler.apply(thisArg, args);
+                    }).then(result => {
+                        if (!result) {
+                            console.warn('Edits from command ' + command + ' were not applied.');
+                        }
+                    }, err => {
+                        console.warn('An error occurred while running command ' + command, err);
+                    });
+                });
             },
             // tslint:disable-next-line:no-any
-            registerHandler(commandId: string, handler: (...args: any[]) => any): Disposable {
-                return commandRegistry.registerHandler(commandId, handler);
+            registerHandler(commandId: string, handler: (...args: any[]) => any, thisArg?: any): Disposable {
+                return commandRegistry.registerHandler(commandId, handler, thisArg);
             },
             getKeyBinding(commandId: string): PromiseLike<theia.CommandKeyBinding[] | undefined> {
                 return commandRegistry.getKeyBinding(commandId);
+            },
+            getCommands(filterInternal: boolean = false): PromiseLike<string[]> {
+                return commandRegistry.getCommands(filterInternal);
             }
         };
 
@@ -331,6 +354,9 @@ export function createAPIFactory(
         };
 
         const workspace: typeof theia.workspace = {
+            get rootPath(): string | undefined {
+                return workspaceExt.rootPath;
+            },
             get workspaceFolders(): theia.WorkspaceFolder[] | undefined {
                 return workspaceExt.workspaceFolders;
             },
@@ -354,7 +380,7 @@ export function createAPIFactory(
             },
             onWillSaveTextDocument(listener, thisArg?, disposables?) {
                 // TODO to implement
-                return { dispose: () => {}};
+                return { dispose: () => { } };
             },
             onDidSaveTextDocument(listener, thisArg?, disposables?) {
                 return documents.onDidSaveTextDocument(listener, thisArg, disposables);
@@ -410,6 +436,16 @@ export function createAPIFactory(
             asRelativePath(pathOrUri: theia.Uri | string, includeWorkspace?: boolean): string | undefined {
                 return workspaceExt.getRelativePath(pathOrUri, includeWorkspace);
             },
+            registerTaskProvider(type: string, provider: theia.TaskProvider): theia.Disposable {
+                return tasks.registerTaskProvider(type, provider);
+            },
+            // Experimental API https://github.com/theia-ide/theia/issues/4167
+            onDidRenameFile(listener, thisArg?, disposables?): theia.Disposable {
+                return new Disposable(() => { });
+            },
+            onWillRenameFile(listener, thisArg?, disposables?): theia.Disposable {
+                return new Disposable(() => { });
+            }
         };
 
         const env: typeof theia.env = {

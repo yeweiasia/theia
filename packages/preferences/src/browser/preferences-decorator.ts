@@ -15,14 +15,17 @@
  ********************************************************************************/
 
 import { inject, injectable } from 'inversify';
-import { Tree, TreeDecorator, TreeDecoration, PreferenceProperty, PreferenceService } from '@theia/core/lib/browser';
+import { Tree, TreeDecorator, TreeDecoration, PreferenceDataProperty, PreferenceService } from '@theia/core/lib/browser';
 import { Emitter, Event, MaybePromise } from '@theia/core';
+import { escapeInvisibleChars } from '@theia/core/lib/common/strings';
 
 @injectable()
 export class PreferencesDecorator implements TreeDecorator {
     readonly id: string = 'theia-preferences-decorator';
 
-    protected preferences: { [id: string]: PreferenceProperty }[];
+    private activeFolderUri: string | undefined;
+
+    protected preferences: { [id: string]: PreferenceDataProperty }[];
     protected preferencesDecorations: Map<string, TreeDecoration.Data>;
 
     protected readonly emitter: Emitter<(tree: Tree) => Map<string, TreeDecoration.Data>> = new Emitter();
@@ -38,23 +41,23 @@ export class PreferencesDecorator implements TreeDecorator {
         return this.emitter.event;
     }
 
-    fireDidChangeDecorations(preferences: {[id: string]: PreferenceProperty}[]): void {
+    fireDidChangeDecorations(preferences: { [id: string]: PreferenceDataProperty }[]): void {
         if (!this.preferences) {
             this.preferences = preferences;
         }
         this.preferencesDecorations = new Map(preferences.map(m => {
             const preferenceName = Object.keys(m)[0];
             const preferenceValue = m[preferenceName];
-            const storedValue = this.preferencesService.get(preferenceName);
+            const storedValue = this.preferencesService.get(preferenceName, undefined, this.activeFolderUri);
             return [preferenceName, {
                 tooltip: preferenceValue.description,
                 captionSuffixes: [
                     {
-                        data: storedValue !== undefined ? ': ' + storedValue : preferenceValue.default !== undefined ? ': ' + preferenceValue.default : undefined,
+                        data: `: ${this.getPreferenceDisplayValue(storedValue, preferenceValue.default)}`
                     },
                     {
                         data: ' ' + preferenceValue.description,
-                        fontData: {color: 'var(--theia-ui-font-color2)'}
+                        fontData: { color: 'var(--theia-ui-font-color2)' }
                     }]
             }] as [string, TreeDecoration.Data];
         }));
@@ -63,5 +66,21 @@ export class PreferencesDecorator implements TreeDecorator {
 
     decorations(tree: Tree): MaybePromise<Map<string, TreeDecoration.Data>> {
         return this.preferencesDecorations;
+    }
+
+    setActiveFolder(folder: string) {
+        this.activeFolderUri = folder;
+        this.fireDidChangeDecorations(this.preferences);
+    }
+
+    // tslint:disable-next-line:no-any
+    private getPreferenceDisplayValue(storedValue: any, defaultValue: any): any {
+        if (storedValue !== undefined) {
+            if (typeof storedValue === 'string') {
+                return escapeInvisibleChars(storedValue);
+            }
+            return storedValue;
+        }
+        return defaultValue;
     }
 }

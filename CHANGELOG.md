@@ -1,8 +1,45 @@
 # Change Log
 
-## v0.3.20
+## v0.4.0
 - [plugin] added `tasks.onDidEndTask` Plug-in API
 - [cpp] fixed `CPP_CLANGD_COMMAND` and `CPP_CLANGD_ARGS` environment variables
+- [electron] open markdown links in the OS default browser
+
+Breaking changes:
+- menus aligned with built-in VS Code menus [#4173](https://github.com/theia-ide/theia/pull/4173)
+  - navigator context menu group changes:
+    - `1_open` and `4_new` replaced by `navigation` group
+    - `6_workspace` renamed to `2_workspace` group
+    - `5_diff` renamed to `3_compare` group
+    - `6_find` renamed to `4_search` group
+    - `2_clipboard` renamed to `5_cutcopypaste` group
+    - `3_move` and `7_actions` replaced by `navigation` group
+  - editor context menu group changes:
+    - `2_cut_copy_paste` renamed to `9_cutcopypaste` group
+- [debug] align commands with VS Code [#4204](https://github.com/theia-ide/theia/issues/4204)
+    - `debug.breakpoint.toggle` renamed to `editor.debug.action.toggleBreakpoint`
+    - `debug.start` renamed to `workbench.action.debug.start`
+    - `debug.thread.continue` renamed to `workbench.action.debug.continue`
+    - `debug.start.noDebug` renamed to `workbench.action.debug.run`
+    - `debug.thread.pause` renamed to `workbench.action.debug.pause`
+    - `debug.thread.stepin` renamed to `workbench.action.debug.stepInto`
+    - `debug.thread.stepout` renamed to `workbench.action.debug.stepOut`
+    - `debug.thread.next` renamed to `workbench.action.debug.stepOver`
+    - `debug.stop` renamed to `workbench.action.debug.stop`
+    - `debug.editor.showHover` renamed to `editor.debug.action.showDebugHover`
+- multi-root workspace support for preferences [#3247](https://github.com/theia-ide/theia/pull/3247)
+  - `PreferenceProvider` 
+    - is changed from a regular class to an abstract class.
+    - the `fireOnDidPreferencesChanged` function is deprecated. `emitPreferencesChangedEvent` function should be used instead. `fireOnDidPreferencesChanged` will be removed with the next major release.
+  - `PreferenceServiceImpl`
+    - `preferences` is deprecated. `getPreferences` function should be used instead. `preferences` will be removed with the next major release.
+  - having `properties` property defined in the `PreferenceSchema` object is now mandatory.
+  - `PreferenceProperty` is renamed to `PreferenceDataProperty`.
+  - `PreferenceSchemaProvider`
+    - the type of `combinedSchema` property is changed from `PreferenceSchema` to `PreferenceDataSchema`.
+    - the return type of `getCombinedSchema` function is changed from `PreferenceSchema` to `PreferenceDataSchema`.
+  - `affects` function is added to `PreferenceChangeEvent` and `PreferenceChange` interface.
+- `navigator.exclude` preference is renamed to `files.exclude` [#4274](https://github.com/theia-ide/theia/pull/4274)
 
 
 ## v0.3.19

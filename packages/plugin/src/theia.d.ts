@@ -1996,23 +1996,33 @@ declare module '@theia/plugin' {
          *
          * Throw if a command is already registered for the given command identifier.
          */
-        export function registerCommand(command: Command, handler?: (...args: any[]) => any): Disposable;
+        export function registerCommand(command: Command, handler?: (...args: any[]) => any, thisArg?: any): Disposable;
 
         /**
          * Register the given handler for the given command identifier.
          *
          * @param commandId a given command id
          * @param handler a command handler
+         *
+         * Throw if a handler for the given command identifier is already registered.
          */
-        export function registerHandler(commandId: string, handler: (...args: any[]) => any): Disposable;
+        export function registerHandler(commandId: string, handler: (...args: any[]) => any, thisArg?: any): Disposable;
 
         /**
-         * Register a text editor command which can execute only if active editor present and command has access to the active editor
+         * Registers a text editor command that can be invoked via a keyboard shortcut,
+         * a menu item, an action, or directly.
          *
-         * @param command a command description
-         * @param handler a command handler with access to text editor
+         * Text editor commands are different from ordinary [commands](#commands.registerCommand) as
+         * they only execute when there is an active editor when the command is called. Also, the
+         * command handler of an editor command has access to the active editor and to an
+         * [edit](#TextEditorEdit)-builder.
+         *
+         * @param command A unique identifier for the command.
+         * @param callback A command handler function with access to an [editor](#TextEditor) and an [edit](#TextEditorEdit).
+         * @param thisArg The `this` context used when invoking the handler function.
+         * @return Disposable which unregisters this command on disposal.
          */
-        export function registerTextEditorCommand(command: Command, handler: (textEditor: TextEditor, edit: TextEditorEdit, ...arg: any[]) => void): Disposable;
+        export function registerTextEditorCommand(command: string, handler: (textEditor: TextEditor, edit: TextEditorEdit, ...arg: any[]) => void, thisArg?: any): Disposable;
 
         /**
          * Execute the active handler for the given command and arguments.
@@ -2020,6 +2030,15 @@ declare module '@theia/plugin' {
          * Reject if a command cannot be executed.
          */
         export function executeCommand<T>(commandId: string, ...args: any[]): PromiseLike<T | undefined>;
+
+        /**
+         * Retrieve the list of all available commands. Commands starting an underscore are
+         * treated as internal commands.
+         *
+         * @param filterInternal Set `true` to not see internal commands (starting with an underscore)
+         * @return Thenable that resolves to a list of command ids.
+         */
+        export function getCommands(filterInternal?: boolean): PromiseLike<string[]>;
     }
 
     /**
@@ -3462,11 +3481,15 @@ declare module '@theia/plugin' {
         /**
          * Global configuration
          */
-        User = 0,
+        Global = 1,
         /**
          * Workspace configuration
          */
-        Workspace = 1
+        Workspace = 2,
+        /**
+         * Workspace folder configuration
+         */
+        WorkspaceFolder = 3
     }
 
     /**
@@ -3744,6 +3767,17 @@ declare module '@theia/plugin' {
      * the editor-process so that they should be always used instead of nodejs-equivalents.
      */
     export namespace workspace {
+
+        /**
+         * ~~The folder that is open in the editor. `undefined` when no folder
+         * has been opened.~~
+         *
+         * @deprecated Use [`workspaceFolders`](#workspace.workspaceFolders) instead.
+         *
+         * @readonly
+         */
+        export let rootPath: string | undefined;
+
         /**
          * List of workspace folders or `undefined` when no folder is open.
          * *Note* that the first entry corresponds to the value of `rootPath`.
@@ -3813,18 +3847,18 @@ declare module '@theia/plugin' {
         export const onDidChangeTextDocument: Event<TextDocumentChangeEvent>;
 
         /**
-		 * An event that is emitted when a [text document](#TextDocument) will be saved to disk.
-		 *
-		 * *Note 1:* Subscribers can delay saving by registering asynchronous work. For the sake of data integrity the editor
-		 * might save without firing this event. For instance when shutting down with dirty files.
-		 *
-		 * *Note 2:* Subscribers are called sequentially and they can [delay](#TextDocumentWillSaveEvent.waitUntil) saving
-		 * by registering asynchronous work. Protection against misbehaving listeners is implemented as such:
-		 *  * there is an overall time budget that all listeners share and if that is exhausted no further listener is called
-		 *  * listeners that take a long time or produce errors frequently will not be called anymore
-		 *
-		 * The current thresholds are 1.5 seconds as overall time budget and a listener can misbehave 3 times before being ignored.
-		 */
+         * An event that is emitted when a [text document](#TextDocument) will be saved to disk.
+         *
+         * *Note 1:* Subscribers can delay saving by registering asynchronous work. For the sake of data integrity the editor
+         * might save without firing this event. For instance when shutting down with dirty files.
+         *
+         * *Note 2:* Subscribers are called sequentially and they can [delay](#TextDocumentWillSaveEvent.waitUntil) saving
+         * by registering asynchronous work. Protection against misbehaving listeners is implemented as such:
+         *  * there is an overall time budget that all listeners share and if that is exhausted no further listener is called
+         *  * listeners that take a long time or produce errors frequently will not be called anymore
+         *
+         * The current thresholds are 1.5 seconds as overall time budget and a listener can misbehave 3 times before being ignored.
+         */
         export const onWillSaveTextDocument: Event<TextDocumentWillSaveEvent>;
 
         /**
@@ -3930,21 +3964,21 @@ declare module '@theia/plugin' {
         export function findFiles(include: GlobPattern, exclude?: GlobPattern | undefined, maxResults?: number, token?: CancellationToken): PromiseLike<Uri[]>;
 
         /**
-		 * Make changes to one or many resources or create, delete, and rename resources as defined by the given
-		 * [workspace edit](#WorkspaceEdit).
-		 *
-		 * All changes of a workspace edit are applied in the same order in which they have been added. If
-		 * multiple textual inserts are made at the same position, these strings appear in the resulting text
-		 * in the order the 'inserts' were made. Invalid sequences like 'delete file a' -> 'insert text in file a'
-		 * cause failure of the operation.
-		 *
-		 * When applying a workspace edit that consists only of text edits an 'all-or-nothing'-strategy is used.
-		 * A workspace edit with resource creations or deletions aborts the operation, e.g. consective edits will
-		 * not be attempted, when a single edit fails.
-		 *
-		 * @param edit A workspace edit.
-		 * @return A thenable that resolves when the edit could be applied.
-		 */
+         * Make changes to one or many resources or create, delete, and rename resources as defined by the given
+         * [workspace edit](#WorkspaceEdit).
+         *
+         * All changes of a workspace edit are applied in the same order in which they have been added. If
+         * multiple textual inserts are made at the same position, these strings appear in the resulting text
+         * in the order the 'inserts' were made. Invalid sequences like 'delete file a' -> 'insert text in file a'
+         * cause failure of the operation.
+         *
+         * When applying a workspace edit that consists only of text edits an 'all-or-nothing'-strategy is used.
+         * A workspace edit with resource creations or deletions aborts the operation, e.g. consective edits will
+         * not be attempted, when a single edit fails.
+         *
+         * @param edit A workspace edit.
+         * @return A thenable that resolves when the edit could be applied.
+         */
         export function applyEdit(edit: WorkspaceEdit): PromiseLike<boolean>;
 
 
@@ -3984,6 +4018,17 @@ declare module '@theia/plugin' {
          * @return A path relative to the root or the input.
          */
         export function asRelativePath(pathOrUri: string | Uri, includeWorkspaceFolder?: boolean): string | undefined;
+
+        /**
+        * ~~Register a task provider.~~
+        *
+        * @deprecated Use the corresponding function on the `tasks` namespace instead
+        *
+        * @param type The task kind type this provider is registered for.
+        * @param provider A task provider.
+        * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+        */
+        export function registerTaskProvider(type: string, provider: TaskProvider): Disposable;
     }
 
     export namespace env {
