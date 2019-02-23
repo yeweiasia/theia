@@ -698,6 +698,7 @@ export interface ModelChangedEvent {
 export interface DocumentsExt {
     $acceptModelModeChanged(startUrl: UriComponents, oldModeId: string, newModeId: string): void;
     $acceptModelSaved(strUrl: UriComponents): void;
+    $acceptModelWillSave(strUrl: UriComponents, reason: theia.TextDocumentSaveReason): Promise<SingleEditOperation[]>;
     $acceptDirtyStateChanged(strUrl: UriComponents, isDirty: boolean): void;
     $acceptModelChanged(strUrl: UriComponents, e: ModelChangedEvent, isDirty: boolean): void;
 }
@@ -828,7 +829,7 @@ export interface TaskDto {
     label: string;
     source?: string;
     // tslint:disable-next-line:no-any
-    properties?: { [key: string]: any };
+    [key: string]: any;
 }
 
 export interface TaskExecutionDto {
@@ -919,11 +920,6 @@ export interface WebviewPanelViewState {
     readonly position: number;
 }
 
-export interface WebviewPanelShowOptions {
-    readonly viewColumn?: number;
-    readonly preserveFocus?: boolean;
-}
-
 export interface WebviewsExt {
     $onMessage(handle: string, message: any): void;
     $onDidChangeWebviewPanelViewState(handle: string, newState: WebviewPanelViewState): void;
@@ -940,11 +936,11 @@ export interface WebviewsMain {
     $createWebviewPanel(handle: string,
         viewType: string,
         title: string,
-        showOptions: WebviewPanelShowOptions,
+        showOptions: theia.WebviewPanelShowOptions,
         options: theia.WebviewPanelOptions & theia.WebviewOptions | undefined,
         pluginLocation: UriComponents): void;
     $disposeWebview(handle: string): void;
-    $reveal(handle: string, showOptions: WebviewPanelShowOptions): void;
+    $reveal(handle: string, showOptions: theia.WebviewPanelShowOptions): void;
     $setTitle(handle: string, value: string): void;
     $setIconPath(handle: string, value: { light: string, dark: string } | string | undefined): void;
     $setHtml(handle: string, value: string): void;
@@ -1046,6 +1042,7 @@ export interface TasksExt {
 
 export interface TasksMain {
     $registerTaskProvider(handle: number, type: string): void;
+    $taskExecutions(): Promise<TaskExecutionDto[]>;
     $unregister(handle: number): void;
     $terminateTask(id: number): void;
 }

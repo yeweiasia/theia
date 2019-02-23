@@ -97,6 +97,7 @@ import {
     ColorInformation,
     ColorPresentation,
     OperatingSystem,
+    WebviewPanelTargetArea
 } from './types-impl';
 import { SymbolKind } from '../api/model';
 import { EditorsAndDocumentsExtImpl } from './editors-and-documents';
@@ -312,7 +313,7 @@ export function createAPIFactory(
             },
             createWebviewPanel(viewType: string,
                 title: string,
-                showOptions: theia.ViewColumn | { viewColumn: theia.ViewColumn, preserveFocus?: boolean },
+                showOptions: theia.ViewColumn | theia.WebviewPanelShowOptions,
                 options: theia.WebviewPanelOptions & theia.WebviewOptions): theia.WebviewPanel {
                 return webviewExt.createWebview(viewType, title, showOptions, options, Uri.file(plugin.pluginPath));
             },
@@ -379,8 +380,7 @@ export function createAPIFactory(
                 return documents.onDidAddDocument(listener, thisArg, disposables);
             },
             onWillSaveTextDocument(listener, thisArg?, disposables?) {
-                // TODO to implement
-                return { dispose: () => { } };
+                return documents.onWillSaveTextDocument(listener, thisArg, disposables);
             },
             onDidSaveTextDocument(listener, thisArg?, disposables?) {
                 return documents.onDidSaveTextDocument(listener, thisArg, disposables);
@@ -619,6 +619,10 @@ export function createAPIFactory(
                 return tasksExt.registerTaskProvider(type, provider);
             },
 
+            get taskExecutions(): ReadonlyArray<theia.TaskExecution> {
+                return tasksExt.taskExecutions;
+            },
+
             onDidStartTask(listener, thisArg?, disposables?) {
                 return tasksExt.onDidStartTask(listener, thisArg, disposables);
             },
@@ -712,7 +716,8 @@ export function createAPIFactory(
             ColorPresentation,
             FoldingRange,
             FoldingRangeKind,
-            OperatingSystem
+            OperatingSystem,
+            WebviewPanelTargetArea
         };
     };
 }
